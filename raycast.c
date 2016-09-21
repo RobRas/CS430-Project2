@@ -3,6 +3,30 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct Color3 {
+  unsigned char r, g, b;
+} Color3
+
+typedef struct Vector3 {
+  double x, y, z;
+} Vector3;
+
+typedef struct Camera {
+  double width, height;
+} Camera;
+
+typedef struct Sphere {
+  Color3 color;
+  Vector3 position;
+  double radius;
+} Sphere;
+
+typedef struct Plane {
+  Color3 color;
+  Vector3 position;
+  Vector3 normal;
+}
+
 void skipWhitespace(FILE* json) {
   int c = fgetc(json);
   while (isspace(c)) {
