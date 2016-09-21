@@ -5,7 +5,7 @@
 
 typedef struct Color3 {
   double r, g, b;
-} Color3
+} Color3;
 
 typedef struct Vector3 {
   double x, y, z;
@@ -25,7 +25,11 @@ typedef struct Plane {
   Color3 color;
   Vector3 position;
   Vector3 normal;
-}
+} Plane;
+
+Camera* camera;
+Sphere* spheres;
+Plane* planes;
 
 void skipWhitespace(FILE* json) {
   int c = fgetc(json);
@@ -106,11 +110,19 @@ void parseJSON(char* fileName) {
   }
 }
 
+void initializeSpace(int nObjects) {
+  camera = malloc(sizeof(Camera) * 1);
+  spheres = malloc(sizeof(Sphere) * nObjects);
+  planes = malloc(sizeof(Plane) * nObjects);
+}
+
 int main(int argc, char* argv[]) {
   if (argc != 5) {
     fprintf(stderr, "Usage: raycast width height input.json output.ppm");
     exit(1);
   }
+
+  initializeSpace(128);
 
   parseJSON(argv[3]);
 
