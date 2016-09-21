@@ -4,7 +4,7 @@
 #include <string.h>
 
 typedef struct Color3 {
-  unsigned char r, g, b;
+  double r, g, b;
 } Color3
 
 typedef struct Vector3 {
