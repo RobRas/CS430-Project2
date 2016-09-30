@@ -42,6 +42,14 @@ static inline void normalize(double* v) {
   v[2] /= len;
 }
 
+static inline double dot(double* a, double* b) {
+  return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+}
+
+static inline double magnitude(double* v) {
+  return sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2]));
+}
+
 
 // Wraps the getc() function and provides error checking and
 // number maintenance
@@ -256,6 +264,16 @@ void parseJSON(char* fileName) {
   }
 }
 
+double planeIntersection(double* Ro, double* Rd, double* P, double* N) {
+  double d = magnitude(P);
+  double Vd = dot(N, Rd);
+  if (Vd == 0) return -1;
+  double Vo = -(dot(N, Ro) + d);
+  double t = Vo / Vd;
+  if (t < 0) return -2;
+  return t;
+}
+
 void createImage(int width, int height) {
   double cx = 0;
   double cy = 0;
@@ -284,11 +302,14 @@ void createImage(int width, int height) {
 
         switch(objects[i]->kind) {
           case PLANE:
+            t = planeIntersection(Ro, Rd,
+              objects[i]->position,
+              objects[i]->plane.normal);
             break;
           case SPHERE:
             break;
           default:
-            fprintf("Error: Object does not have an appropriate kind.");
+            fprintf(stderr, "Error: Object does not have an appropriate kind.");
             exit(1);
         }
 
@@ -330,7 +351,7 @@ int main(int argc, char* argv[]) {
   objects = malloc(sizeof(Object*) * 129);
 
   parseJSON(argv[3]);
-  createImage();
+  createImage(atoi(argv[1]), atoi(argv[2]));
 
 #ifdef DEBUG
   displayObjects();
