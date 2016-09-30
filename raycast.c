@@ -3,14 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct Color3 {
-  double r, g, b;
-} Color3;
-
-typedef struct Vector3 {
-  double x, y, z;
-} Vector3;
-
 typedef struct Camera {
   double width, height;
 } Camera;
