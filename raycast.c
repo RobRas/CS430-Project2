@@ -2,110 +2,264 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
-typedef struct Camera {
-  double width, height;
+#define PLANE 0
+#define SPHERE 1
+
+int line = 1;
+
+typedef struct {
+  double width;
+  double height;
 } Camera;
 
-typedef struct Sphere {
-  Color3 color;
-  Vector3 position;
-  double radius;
-} Sphere;
+typedef struct {
+  int kind; // 0 = Plane, 1 = Sphere
+  double color[3];
+  double position[3];
+  union {
+    struct {
+      double normal[3];
+    } plane;
+    struct {
+      double radius;
+    } sphere;
+  };
+} Object;
 
-typedef struct Plane {
-  Color3 color;
-  Vector3 position;
-  Vector3 normal;
-} Plane;
+Camera camera;
+Object** objects;
 
-Camera* camera;
-Sphere* spheres;
-Plane* planes;
 
-void skipWhitespace(FILE* json) {
+// Wraps the getc() function and provides error checking and
+// number maintenance
+int fnextc(FILE* json) {
   int c = fgetc(json);
+#ifdef DEBUG
+  printf("fnextc: '%c'\n", c);
+#endif
+  if (c == '\n') {
+    line++;
+  }
+  if (c == EOF) {
+    fprintf(stderr, "Error: Unexpected end of file on line number %d.\n", line);
+    exit(1);
+  }
+  return c;
+}
+
+// fexpectc() checks that the next character in d. If it is not it
+// emits and error.
+void fexpectc(FILE* json, int d) {
+  int c = fnextc(json);
+  if (c == d) return;
+  fprintf(stderr, "Error: Expected '%c' on line %d.\n", d, line);
+  exit(1);
+}
+
+// skipWhitespace skips white space in the file.
+void skipWhitespace(FILE* json) {
+  int c = fnextc(json);
   while (isspace(c)) {
-    c = fgetc(json);
+    c = fnextc(json);
   }
   ungetc(c, json);
 }
 
-char* parseString(FILE* json) {
-  char buffer[128];
-  int c = fgetc(json);
+// parseString gets the next string from the file handle and emits
+// an error if a string can not be obtained.
+char* nextString(FILE* json) {
+  char buffer[129];
+  int c = fnextc(json);
   if (c != '"') {
-    fprintf(stderr, "Error: String must start with '\"'");
+    fprintf(stderr, "Error: Expected string on line %d.\n", line);
     exit(1);
   }
-
+  c = fnextc(json);
   int i = 0;
-  while (c = fgetc(json) != '"') {
-    buffer[i++] = c;
+  while (c != '"') {
+    if (i >= 128) {
+      fprintf(stderr, "Error: Strings longer than 128 characters in length are not supported. See line %d.\n", line);
+      exit(1);
+    } else if (c == '\\') {
+      fprintf(stderr, "Error: Strings with escape codes are not supperted. See line %d.\n", line);
+      exit(1);
+    } else if (c < 32 || c > 126) {
+      fprintf(stderr, "Error: Strings may contain only ascii characters. See line %d.\n", line);
+      exit(1);
+    }
+    buffer[i] = c;
+    i++;
+    c = fnextc(json);
   }
-
   buffer[i] = '\0';
   return strdup(buffer);
 }
 
-void parseJSON(char* fileName) {
-  FILE* json = fopen(fileName, "r");
-  skipWhitespace(json);
+double nextNumber(FILE* json) {
+  double value;
+  fscanf(json, "%lf", &value);
+  // Error check this...
+  return value;
+}
 
-  int c = fgetc(json);
-  if (c != '[') {
-    fprintf(stderr, "Error: JSON file must start with '['");
-    fclose(json);
+double* nextVector(FILE* json) {
+  double* v = malloc(3 * sizeof(double));
+  fexpectc(json, '[');
+  skipWhitespace(json);
+  v[0] = nextNumber(json);
+  skipWhitespace(json);
+  fexpectc(json, ',');
+  skipWhitespace(json);
+  v[1] = nextNumber(json);
+  skipWhitespace(json);
+  fexpectc(json, ',');
+  skipWhitespace(json);
+  v[2] = nextNumber(json);
+  skipWhitespace(json);
+  fexpectc(json, ']');
+  return v;
+}
+
+void parseObject(FILE* json, int currentObject) {
+  int c;
+  while (1) {
+    c = fnextc(json);
+    if (c == '}') {
+      // Stop parsing this object
+      break;
+    } else if (c == ',') {
+      skipWhitespace(json);
+      char* key = nextString(json);
+      skipWhitespace(json);
+      fexpectc(json, ':');
+      skipWhitespace(json);
+
+      if (strcmp(key, "width") == 0) {
+        camera.width = nextNumber(json);
+      } else if (strcmp(key, "height") == 0) {
+        camera.height = nextNumber(json);
+      } else if (strcmp(key, "radius") == 0) {
+        objects[currentObject]->sphere.radius = nextNumber(json);
+      } else if (strcmp(key, "color") == 0) {
+        double* v = nextVector(json);
+        for (int i = 0; i < 3; i++) {
+          objects[currentObject]->color[i] = v[i];
+        }
+      } else if (strcmp(key, "position") == 0) {
+        double* v = nextVector(json);
+        for (int i = 0; i < 3; i++) {
+          objects[currentObject]->position[i] = v[i];
+        }
+      } else if (strcmp(key, "normal") == 0) {
+        double* v = nextVector(json);
+        for (int i = 0; i < 3; i++) {
+          objects[currentObject]->plane.normal[i] = v[i];
+        }
+      } else {
+        fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n", key, line);
+        exit(1);
+      }
+      skipWhitespace(json);
+    } else {
+      fprintf(stderr, "Error: Unexpected value on line %d.\n", line);
+      exit(1);
+    }
+  }
+}
+
+void parseJSON(char* fileName) {
+  int c;
+  FILE* json = fopen(fileName, "r");
+
+  if (json == NULL) {
+    fprintf(stderr, "Error: Could not open file \"%s\"\n", fileName);
     exit(1);
   }
 
   skipWhitespace(json);
 
-  c = fgetc(json);
-  while (c == '{') {
-    //Parse the object
-    char* key = parseString(json);
-    if (strcmp(key, "type") != 0) {
-      fprintf(stderr, "JSON objects must start with \"type\"");
-      exit(1);
-    }
+  // Find the beginning of the list
+  fexpectc(json, '[');
 
-    free(key);
+  skipWhitespace(json);
 
-    skipWhitespace(json);
-    c = fgetc(json);
-    if (c != ':') {
-      fprintf(stderr, "Error: Type not followed by ':'");
-      exit(1);
-    }
-
-    skipWhitespace(json);
-    char* type = parseString(json);
-
-    if (strcmp(type, "camera") == 0) {
-
-    } else if (strcmp(type, "sphere") == 0) {
-
-    } else if (strcmp(type, "plane") == 0) {
-
-    } else {
-      fprintf(stderr, "Error: Invalid type. Must be \"camera\", \"sphere\", or \"plane\".");
+  int currentObject = 0;
+  while (1) {
+    c = fnextc(json);
+    if (c == ']') {
+      fprintf(stderr, "Error: This is the worst scene file EVER.\n");
       fclose(json);
-      exit(1);
+      return;
+    } else if (c == '{') {
+      skipWhitespace(json);
+
+      // Parse the object
+      char* key = nextString(json);
+      if (strcmp(key, "type") != 0) {
+        fprintf(stderr, "Error: Expected \"type\" key on line number %d.\n", line);
+        exit(1);
+      }
+
+      skipWhitespace(json);
+
+      fexpectc(json, ':');
+
+      skipWhitespace(json);
+
+      char* value = nextString(json);
+
+      skipWhitespace(json);
+      if (strcmp(value, "camera") == 0) {
+        objects[currentObject] = malloc(sizeof(Object));
+        parseObject(json, currentObject);
+      } else if (strcmp(value, "sphere") == 0) {
+        objects[currentObject] = malloc(sizeof(Object));
+        objects[currentObject]->kind = SPHERE;
+        parseObject(json, currentObject);
+        currentObject++;
+      } else if (strcmp(value, "plane") == 0) {
+        objects[currentObject] = malloc(sizeof(Object));
+        objects[currentObject]->kind = PLANE;
+        parseObject(json, currentObject);
+        currentObject++;
+      } else {
+        fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
+        exit(1);
+      }
+
+      skipWhitespace(json);
+      c = fnextc(json);
+      if (c == ',') {
+        skipWhitespace(json);
+      } else if (c == ']') {
+        objects[currentObject] = NULL;
+        fclose(json);
+        return;
+      } else {
+        fprintf(stderr, "Error: Expecting ',' or ']' on line %d.\n", line);
+        exit(1);
+      }
     }
-
-  }
-
-  c = fgetc(json);
-  if (c == ']') {
-    fclose(json);
   }
 }
 
-void initializeSpace(int nObjects) {
-  camera = malloc(sizeof(Camera) * 1);
-  spheres = malloc(sizeof(Sphere) * nObjects);
-  planes = malloc(sizeof(Plane) * nObjects);
+void displayObjects() {
+  printf("Camera:\n\tWidth: %lf\n\tHeight: %lf\n", camera.width, camera.height);
+  int i = 0;
+  while (objects[i] != NULL) {
+    if (objects[i]->kind == PLANE) {
+      printf("Plane:\n\tColor.r: %lf\n\tColor.g: %lf\n\tColor.b: %lf\n", objects[i]->color[0], objects[i]->color[1], objects[i]->color[2]);
+      printf("\tPosition.x: %lf\n\tPosition.y: %lf\n\tPosition.z: %lf\n", objects[i]->position[0], objects[i]->position[1], objects[i]->position[2]);
+      printf("\tNormal.x: %lf\n\tNormal.y: %lf\n\tNormal.z: %lf\n", objects[i]->plane.normal[0], objects[i]->plane.normal[1], objects[i]->plane.normal[2]);
+    } else if (objects[i]->kind == SPHERE) {
+      printf("Sphere:\n\tColor.r: %lf\n\tColor.g: %lf\n\tColor.b: %lf\n", objects[i]->color[0], objects[i]->color[1], objects[i]->color[2]);
+      printf("\tPosition.x: %lf\n\tPosition.y: %lf\n\tPosition.z: %lf\n", objects[i]->position[0], objects[i]->position[1], objects[i]->position[2]);
+      printf("\tRadius: %lf\n", objects[i]->sphere.radius);
+    }
+    i++;
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -114,9 +268,14 @@ int main(int argc, char* argv[]) {
     exit(1);
   }
 
-  initializeSpace(128);
+  objects = malloc(sizeof(Object*) * 129);
 
   parseJSON(argv[3]);
+
+#ifdef DEBUG
+  displayObjects();
+#endif
+
 
   return 0;
 }
