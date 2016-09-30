@@ -279,6 +279,23 @@ double planeIntersection(double* Ro, double* Rd, double* P, double* N) {
   return t;
 }
 
+double sphereIntersection(double* Ro, double* Rd, double* P, double r) {
+  double A = sqr(Rd[0]) + sqr(Rd[1]) + sqr(Rd[2]);
+  double B = 2 * (Rd[0] * (Ro[0] - P[0]) + Rd[1] * (Ro[1] - P[1]) + Rd[2] * (Ro[2] - P[2]));
+  double C = sqr(Ro[0] - P[0]) + sqr(Ro[1] - P[1]) + sqr(Ro[2] - P[2]) - sqr(r);
+
+  double det = sqr(B) - 4 * A * C;
+  if (det < 0) return -1;
+  det = sqrt(det);
+  double t0 = (-B - det) / (2 * A);
+  if (t0 > 0) return t0;
+
+  double t1 = (-B + det) / (2 * A);
+  if (t1 > 0) return t1;
+
+  return -1;
+}
+
 void createImage(int width, int height) {
   double cx = 0;
   double cy = 0;
@@ -312,6 +329,9 @@ void createImage(int width, int height) {
               objects[i]->plane.normal);
             break;
           case SPHERE:
+            t = sphereIntersection(Ro, Rd,
+              objects[i]->position,
+              objects[i]->sphere.radius);
             break;
           default:
             fprintf(stderr, "Error: Object does not have an appropriate kind.");
