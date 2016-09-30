@@ -7,7 +7,13 @@
 #define PLANE 0
 #define SPHERE 1
 
+#define MAX_COLOR_VALUE 255
+
 int line = 1;
+
+typedef struct {
+  unsigned char r, g, b;
+} Pixel;
 
 typedef struct {
   double width;
@@ -28,6 +34,7 @@ typedef struct {
   };
 } Object;
 
+Pixel* pixmap;
 Camera camera;
 Object** objects;
 
@@ -275,7 +282,6 @@ double planeIntersection(double* Ro, double* Rd, double* P, double* N) {
   double Vo = -(dot(N, Ro) + d);
   double t = Vo / Vd;
   if (t < 0) return -2;
-  // printf("%lf\n", t);
   return t;
 }
 
@@ -296,7 +302,7 @@ double sphereIntersection(double* Ro, double* Rd, double* P, double r) {
   return -1;
 }
 
-void createImage(int width, int height) {
+void createScene(int width, int height) {
   double cx = 0;
   double cy = 0;
   double h = camera.height;
@@ -318,6 +324,10 @@ void createImage(int width, int height) {
       };
       normalize(Rd);
 
+      pixmap[(y * width) + x].r = 0;
+      pixmap[(y * width) + x].g = 0;
+      pixmap[(y * width) + x].b = 0;
+
       double best_t = INFINITY;
       for (int i = 0; objects[i] != NULL; i++) {
         double t = 0;
@@ -338,16 +348,25 @@ void createImage(int width, int height) {
             exit(1);
         }
 
-        if (t > 0 && t < best_t) best_t = t;
-      }
-      if (best_t > 0 && best_t != INFINITY) {
-        printf("#");
-      } else {
-        printf(".");
+        if (t > 0 && t < best_t) {
+          best_t = t;
+          pixmap[(y * width) + x].r = (unsigned char)(objects[i]->color[0] * MAX_COLOR_VALUE);
+          pixmap[(y * width) + x].g = (unsigned char)(objects[i]->color[1] * MAX_COLOR_VALUE);
+          pixmap[(y * width) + x].b = (unsigned char)(objects[i]->color[2] * MAX_COLOR_VALUE);
+        }
       }
     }
-    printf("\n");
   }
+}
+
+void writeP6(char* outputPath, int width, int height) {
+  FILE* fh = fopen(outputPath, "wb");
+  if (fh == NULL) {
+    fprintf(stderr, "Error: Output file not found.\n");
+  }
+  fprintf(fh, "P6\n# Converted with Robert Rasmussen's ppmrw\n%d %d\n%d\n", width, height, MAX_COLOR_VALUE);
+  fwrite(pixmap, sizeof(Pixel), width*height, fh);
+  fclose(fh);
 }
 
 void displayObjects() {
@@ -373,10 +392,16 @@ int main(int argc, char* argv[]) {
     exit(1);
   }
 
+  int width = atoi(argv[1]);
+  int height = atoi(argv[2]);
+
+  pixmap = malloc(sizeof(Pixel) * width * height);
   objects = malloc(sizeof(Object*) * 129);
 
   parseJSON(argv[3]);
-  createImage(atoi(argv[1]), atoi(argv[2]));
+  createScene(width, height);
+
+  writeP6(argv[4], width, height);
 
 #ifdef DEBUG
   displayObjects();
