@@ -31,6 +31,17 @@ typedef struct {
 Camera camera;
 Object** objects;
 
+static inline double sqr(double v) {
+  return v*v;
+}
+
+static inline void normalize(double* v) {
+  double len = sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2]));
+  v[0] /= len;
+  v[1] /= len;
+  v[2] /= len;
+}
+
 
 // Wraps the getc() function and provides error checking and
 // number maintenance
@@ -245,6 +256,54 @@ void parseJSON(char* fileName) {
   }
 }
 
+void createImage(int width, int height) {
+  double cx = 0;
+  double cy = 0;
+  double h = camera.height;
+  double w = camera.width;
+
+  int M = height;
+  int N = width;
+
+  double pixheight = h / M;
+  double pixwidth = w / N;
+
+  for (int y = 0; y < M; y++) {
+    for (int x = 0; x < N; x++) {
+      double Ro[3] = {0, 0, 0};
+      double Rd[3] = {
+        cx - (w/2) + pixwidth * (x + 0.5),
+        cy - (h/2) + pixheight * (y + 0.5),
+        1
+      };
+      normalize(Rd);
+
+      double best_t = INFINITY;
+      for (int i = 0; objects[i] != NULL; i++) {
+        double t = 0;
+
+        switch(objects[i]->kind) {
+          case PLANE:
+            break;
+          case SPHERE:
+            break;
+          default:
+            fprintf("Error: Object does not have an appropriate kind.");
+            exit(1);
+        }
+
+        if (t > 0 && t < best_t) best_t = t;
+      }
+      if (best_t > 0 && best_t != INFINITY) {
+        printf("#");
+      } else {
+        printf(".");
+      }
+    }
+    printf("\n");
+  }
+}
+
 void displayObjects() {
   printf("Camera:\n\tWidth: %lf\n\tHeight: %lf\n", camera.width, camera.height);
   int i = 0;
@@ -271,6 +330,7 @@ int main(int argc, char* argv[]) {
   objects = malloc(sizeof(Object*) * 129);
 
   parseJSON(argv[3]);
+  createImage();
 
 #ifdef DEBUG
   displayObjects();
