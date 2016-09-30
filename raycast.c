@@ -50,6 +50,10 @@ static inline double magnitude(double* v) {
   return sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2]));
 }
 
+static inline double distanceFromOrigin(double* v) {
+  return sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2]));
+}
+
 
 // Wraps the getc() function and provides error checking and
 // number maintenance
@@ -265,12 +269,13 @@ void parseJSON(char* fileName) {
 }
 
 double planeIntersection(double* Ro, double* Rd, double* P, double* N) {
-  double d = magnitude(P);
+  double d = distanceFromOrigin(P);
   double Vd = dot(N, Rd);
   if (Vd == 0) return -1;
   double Vo = -(dot(N, Ro) + d);
   double t = Vo / Vd;
   if (t < 0) return -2;
+  // printf("%lf\n", t);
   return t;
 }
 
