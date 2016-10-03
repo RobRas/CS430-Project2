@@ -168,18 +168,21 @@ void parseObject(FILE* json, int currentObject, int objectType) {
           camera.width = nextNumber(json);
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
+          exit(1);
         }
       } else if (strcmp(key, "height") == 0) {
         if (objectType == CAMERA) {
           camera.height = nextNumber(json);
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
+          exit(1);
         }
       } else if (strcmp(key, "radius") == 0) {
         if (objectType == SPHERE) {
           objects[currentObject]->sphere.radius = nextNumber(json);
         }  else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
+          exit(1);
         }
       } else if (strcmp(key, "color") == 0) {
         if (objectType == PLANE || objectType == SPHERE) {
@@ -189,6 +192,7 @@ void parseObject(FILE* json, int currentObject, int objectType) {
           }
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
+          exit(1);
         }
       } else if (strcmp(key, "position") == 0) {
         if (objectType == PLANE || objectType == SPHERE) {
@@ -198,6 +202,7 @@ void parseObject(FILE* json, int currentObject, int objectType) {
           }
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
+          exit(1);
         }
       } else if (strcmp(key, "normal") == 0) {
         if (objectType == PLANE) {
@@ -207,6 +212,7 @@ void parseObject(FILE* json, int currentObject, int objectType) {
           }
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
+          exit(1);
         }
       } else {
         fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n", key, line);
