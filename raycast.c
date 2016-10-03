@@ -6,6 +6,7 @@
 
 #define PLANE 0
 #define SPHERE 1
+#define CAMERA 2
 
 #define MAX_COLOR_VALUE 255
 
@@ -148,7 +149,7 @@ double* nextVector(FILE* json) {
   return v;
 }
 
-void parseObject(FILE* json, int currentObject) {
+void parseObject(FILE* json, int currentObject, int objectType) {
   int c;
   while (1) {
     c = fnextc(json);
@@ -163,25 +164,49 @@ void parseObject(FILE* json, int currentObject) {
       skipWhitespace(json);
 
       if (strcmp(key, "width") == 0) {
-        camera.width = nextNumber(json);
+        if (objectType == CAMERA) {
+          camera.width = nextNumber(json);
+        } else {
+          fprintf(stderr, "Error: Improper object field on line %d", line);
+        }
       } else if (strcmp(key, "height") == 0) {
-        camera.height = nextNumber(json);
+        if (objectType == CAMERA) {
+          camera.height = nextNumber(json);
+        } else {
+          fprintf(stderr, "Error: Improper object field on line %d", line);
+        }
       } else if (strcmp(key, "radius") == 0) {
-        objects[currentObject]->sphere.radius = nextNumber(json);
+        if (objectType == SPHERE) {
+          objects[currentObject]->sphere.radius = nextNumber(json);
+        }  else {
+          fprintf(stderr, "Error: Improper object field on line %d", line);
+        }
       } else if (strcmp(key, "color") == 0) {
-        double* v = nextVector(json);
-        for (int i = 0; i < 3; i++) {
-          objects[currentObject]->color[i] = v[i];
+        if (objectType == PLANE || objectType == SPHERE) {
+          double* v = nextVector(json);
+          for (int i = 0; i < 3; i++) {
+            objects[currentObject]->color[i] = v[i];
+          }
+        } else {
+          fprintf(stderr, "Error: Improper object field on line %d", line);
         }
       } else if (strcmp(key, "position") == 0) {
-        double* v = nextVector(json);
-        for (int i = 0; i < 3; i++) {
-          objects[currentObject]->position[i] = v[i];
+        if (objectType == PLANE || objectType == SPHERE) {
+          double* v = nextVector(json);
+          for (int i = 0; i < 3; i++) {
+            objects[currentObject]->position[i] = v[i];
+          }
+        } else {
+          fprintf(stderr, "Error: Improper object field on line %d", line);
         }
       } else if (strcmp(key, "normal") == 0) {
-        double* v = nextVector(json);
-        for (int i = 0; i < 3; i++) {
-          objects[currentObject]->plane.normal[i] = v[i];
+        if (objectType == PLANE) {
+          double* v = nextVector(json);
+          for (int i = 0; i < 3; i++) {
+            objects[currentObject]->plane.normal[i] = v[i];
+          }
+        } else {
+          fprintf(stderr, "Error: Improper object field on line %d", line);
         }
       } else {
         fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n", key, line);
@@ -238,17 +263,16 @@ void parseJSON(char* fileName) {
 
       skipWhitespace(json);
       if (strcmp(value, "camera") == 0) {
-        objects[currentObject] = malloc(sizeof(Object));
-        parseObject(json, currentObject);
+        parseObject(json, currentObject, CAMERA);
       } else if (strcmp(value, "sphere") == 0) {
         objects[currentObject] = malloc(sizeof(Object));
         objects[currentObject]->kind = SPHERE;
-        parseObject(json, currentObject);
+        parseObject(json, currentObject, SPHERE);
         currentObject++;
       } else if (strcmp(value, "plane") == 0) {
         objects[currentObject] = malloc(sizeof(Object));
         objects[currentObject]->kind = PLANE;
-        parseObject(json, currentObject);
+        parseObject(json, currentObject, PLANE);
         currentObject++;
       } else {
         fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
