@@ -324,9 +324,9 @@ void createScene(int width, int height) {
       };
       normalize(Rd);
 
-      pixmap[(y * width) + x].r = 0;
-      pixmap[(y * width) + x].g = 0;
-      pixmap[(y * width) + x].b = 0;
+      pixmap[(height - 1) * width - (y * width) + x].r = 0;
+      pixmap[(height - 1) * width - (y * width) + x].g = 0;
+      pixmap[(height - 1) * width - (y * width) + x].b = 0;
 
       double best_t = INFINITY;
       for (int i = 0; objects[i] != NULL; i++) {
@@ -350,9 +350,9 @@ void createScene(int width, int height) {
 
         if (t > 0 && t < best_t) {
           best_t = t;
-          pixmap[(y * width) + x].r = (unsigned char)(objects[i]->color[0] * MAX_COLOR_VALUE);
-          pixmap[(y * width) + x].g = (unsigned char)(objects[i]->color[1] * MAX_COLOR_VALUE);
-          pixmap[(y * width) + x].b = (unsigned char)(objects[i]->color[2] * MAX_COLOR_VALUE);
+          pixmap[(height - 1) * width - (y * width) + x].r = (unsigned char)(objects[i]->color[0] * MAX_COLOR_VALUE);
+          pixmap[(height - 1) * width - (y * width) + x].g = (unsigned char)(objects[i]->color[1] * MAX_COLOR_VALUE);
+          pixmap[(height - 1) * width - (y * width) + x].b = (unsigned char)(objects[i]->color[2] * MAX_COLOR_VALUE);
         }
       }
     }
