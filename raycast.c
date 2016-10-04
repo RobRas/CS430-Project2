@@ -36,7 +36,7 @@ typedef struct {
 } Object;
 
 Pixel* pixmap;
-Camera camera;
+Camera** camera;
 Object** objects;
 
 static inline double sqr(double v) {
@@ -165,14 +165,14 @@ void parseObject(FILE* json, int currentObject, int objectType) {
 
       if (strcmp(key, "width") == 0) {
         if (objectType == CAMERA) {
-          camera.width = nextNumber(json);
+          camera[0]->width = nextNumber(json);
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
           exit(1);
         }
       } else if (strcmp(key, "height") == 0) {
         if (objectType == CAMERA) {
-          camera.height = nextNumber(json);
+          camera[0]->height = nextNumber(json);
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
           exit(1);
@@ -229,6 +229,7 @@ void parseObject(FILE* json, int currentObject, int objectType) {
 void parseJSON(char* fileName) {
   int c;
   FILE* json = fopen(fileName, "r");
+  camera[0] = NULL;
 
   if (json == NULL) {
     fprintf(stderr, "Error: Could not open file \"%s\"\n", fileName);
@@ -269,7 +270,13 @@ void parseJSON(char* fileName) {
 
       skipWhitespace(json);
       if (strcmp(value, "camera") == 0) {
-        parseObject(json, currentObject, CAMERA);
+        if (camera[0] == NULL) {
+          camera[0] = malloc(sizeof(Camera));
+          parseObject(json, currentObject, CAMERA);
+        } else {
+          fprintf(stderr, "Error: There should only be one camera per scene.\n");
+          exit(1);
+        }
       } else if (strcmp(value, "sphere") == 0) {
         objects[currentObject] = malloc(sizeof(Object));
         objects[currentObject]->kind = SPHERE;
@@ -290,6 +297,10 @@ void parseJSON(char* fileName) {
       if (c == ',') {
         skipWhitespace(json);
       } else if (c == ']') {
+        if (camera[0] == NULL) {
+          fprintf(stderr, "Error: Scene must contain a camera.\n");
+          exit(1);
+        }
         objects[currentObject] = NULL;
         fclose(json);
         return;
@@ -297,6 +308,9 @@ void parseJSON(char* fileName) {
         fprintf(stderr, "Error: Expecting ',' or ']' on line %d.\n", line);
         exit(1);
       }
+    } else {
+      fprintf(stderr, "Error: Expecting '{' on line %d.\n", line);
+      exit(1);
     }
   }
 }
@@ -331,8 +345,8 @@ double sphereIntersection(double* Ro, double* Rd, double* P, double r) {
 void createScene(int width, int height) {
   double cx = 0;
   double cy = 0;
-  double h = camera.height;
-  double w = camera.width;
+  double h = camera[0]->height;
+  double w = camera[0]->width;
 
   int M = height;
   int N = width;
@@ -396,7 +410,7 @@ void writeP6(char* outputPath, int width, int height) {
 }
 
 void displayObjects() {
-  printf("Camera:\n\tWidth: %lf\n\tHeight: %lf\n", camera.width, camera.height);
+  printf("Camera:\n\tWidth: %lf\n\tHeight: %lf\n", camera[0]->width, camera[0]->height);
   int i = 0;
   while (objects[i] != NULL) {
     if (objects[i]->kind == PLANE) {
@@ -422,6 +436,7 @@ int main(int argc, char* argv[]) {
   int height = atoi(argv[2]);
 
   pixmap = malloc(sizeof(Pixel) * width * height);
+  camera = malloc(sizeof(Camera));
   objects = malloc(sizeof(Object*) * 129);
 
   parseJSON(argv[3]);
