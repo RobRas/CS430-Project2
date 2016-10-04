@@ -165,21 +165,39 @@ void parseObject(FILE* json, int currentObject, int objectType) {
 
       if (strcmp(key, "width") == 0) {
         if (objectType == CAMERA) {
-          camera[0]->width = nextNumber(json);
+          double w = nextNumber(json);
+          if (w > 0 || w <= 1) {
+              camera[0]->width = w;
+          } else {
+            fprintf(stderr, "Camera width must be between 0 and 1.\n");
+            exit(1);
+          }
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
           exit(1);
         }
       } else if (strcmp(key, "height") == 0) {
         if (objectType == CAMERA) {
-          camera[0]->height = nextNumber(json);
+          double h = nextNumber(json);
+          if (h > 0 || h <= 1) {
+              camera[0]->height = h;
+          } else {
+            fprintf(stderr, "Camera height must be between 0 and 1.\n");
+            exit(1);
+          }
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
           exit(1);
         }
       } else if (strcmp(key, "radius") == 0) {
         if (objectType == SPHERE) {
-          objects[currentObject]->sphere.radius = nextNumber(json);
+          double radius = nextNumber(json);
+          if (radius >= 0) {
+            objects[currentObject]->sphere.radius = radius;
+          } else {
+            fprintf(stderr, "Error: Radius cannot be less than 0.\n");
+            exit(1);
+          }
         }  else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
           exit(1);
@@ -188,6 +206,10 @@ void parseObject(FILE* json, int currentObject, int objectType) {
         if (objectType == PLANE || objectType == SPHERE) {
           double* v = nextVector(json);
           for (int i = 0; i < 3; i++) {
+            if (v[i] < 0 || v[i] > 1) {
+              fprintf(stderr, "Error: Color values must be between 0 and 1.\n");
+              exit(1);
+            }
             objects[currentObject]->color[i] = v[i];
           }
         } else {
@@ -207,6 +229,7 @@ void parseObject(FILE* json, int currentObject, int objectType) {
       } else if (strcmp(key, "normal") == 0) {
         if (objectType == PLANE) {
           double* v = nextVector(json);
+          normalize(v);
           for (int i = 0; i < 3; i++) {
             objects[currentObject]->plane.normal[i] = v[i];
           }
@@ -433,7 +456,15 @@ int main(int argc, char* argv[]) {
   }
 
   int width = atoi(argv[1]);
+  if (width <= 0) {
+    fprintf(stderr, "Error: Width must be greater than 0.");
+    exit(1);
+  }
   int height = atoi(argv[2]);
+  if (height <= 0) {
+    fprintf(stderr, "Error: Width must be greater than 0.");
+    exit(1);
+  }
 
   pixmap = malloc(sizeof(Pixel) * width * height);
   camera = malloc(sizeof(Camera));
