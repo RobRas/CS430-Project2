@@ -166,10 +166,10 @@ void parseObject(FILE* json, int currentObject, int objectType) {
       if (strcmp(key, "width") == 0) {
         if (objectType == CAMERA) {
           double w = nextNumber(json);
-          if (w > 0 || w <= 1) {
+          if (w > 0) {
               camera[0]->width = w;
           } else {
-            fprintf(stderr, "Camera width must be between 0 and 1.\n");
+            fprintf(stderr, "Camera width must be greater than 0.\n");
             exit(1);
           }
         } else {
@@ -179,10 +179,10 @@ void parseObject(FILE* json, int currentObject, int objectType) {
       } else if (strcmp(key, "height") == 0) {
         if (objectType == CAMERA) {
           double h = nextNumber(json);
-          if (h > 0 || h <= 1) {
+          if (h > 0) {
               camera[0]->height = h;
           } else {
-            fprintf(stderr, "Camera height must be between 0 and 1.\n");
+            fprintf(stderr, "Camera height must be greater than 0.\n");
             exit(1);
           }
         } else {
