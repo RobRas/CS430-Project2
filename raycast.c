@@ -24,7 +24,7 @@ typedef struct {
 typedef struct {
   int kind; // 0 = Plane, 1 = Sphere
   double color[3];
-  double location[3];
+  double position[3];
   union {
     struct {
       double normal[3];
@@ -216,11 +216,11 @@ void parseObject(FILE* json, int currentObject, int objectType) {
           fprintf(stderr, "Error: Improper object field on line %d", line);
           exit(1);
         }
-      } else if (strcmp(key, "location") == 0) {
+      } else if (strcmp(key, "position") == 0) {
         if (objectType == PLANE || objectType == SPHERE) {
           double* v = nextVector(json);
           for (int i = 0; i < 3; i++) {
-            objects[currentObject]->location[i] = v[i];
+            objects[currentObject]->position[i] = v[i];
           }
         } else {
           fprintf(stderr, "Error: Improper object field on line %d", line);
@@ -398,12 +398,12 @@ void createScene(int width, int height) {
         switch(objects[i]->kind) {
           case PLANE:
             t = planeIntersection(Ro, Rd,
-              objects[i]->location,
+              objects[i]->position,
               objects[i]->plane.normal);
             break;
           case SPHERE:
             t = sphereIntersection(Ro, Rd,
-              objects[i]->location,
+              objects[i]->position,
               objects[i]->sphere.radius);
             break;
           default:
@@ -438,11 +438,11 @@ void displayObjects() {
   while (objects[i] != NULL) {
     if (objects[i]->kind == PLANE) {
       printf("Plane:\n\tColor.r: %lf\n\tColor.g: %lf\n\tColor.b: %lf\n", objects[i]->color[0], objects[i]->color[1], objects[i]->color[2]);
-      printf("\tLocation.x: %lf\n\tLocation.y: %lf\n\tLocation.z: %lf\n", objects[i]->location[0], objects[i]->location[1], objects[i]->location[2]);
+      printf("\tPosition.x: %lf\n\tPosition.y: %lf\n\tPosition.z: %lf\n", objects[i]->position[0], objects[i]->position[1], objects[i]->position[2]);
       printf("\tNormal.x: %lf\n\tNormal.y: %lf\n\tNormal.z: %lf\n", objects[i]->plane.normal[0], objects[i]->plane.normal[1], objects[i]->plane.normal[2]);
     } else if (objects[i]->kind == SPHERE) {
       printf("Sphere:\n\tColor.r: %lf\n\tColor.g: %lf\n\tColor.b: %lf\n", objects[i]->color[0], objects[i]->color[1], objects[i]->color[2]);
-      printf("\tLocation.x: %lf\n\tLocation.y: %lf\n\tLocation.z: %lf\n", objects[i]->location[0], objects[i]->location[1], objects[i]->location[2]);
+      printf("\tPosition.x: %lf\n\tPosition.y: %lf\n\tPosition.z: %lf\n", objects[i]->position[0], objects[i]->position[1], objects[i]->position[2]);
       printf("\tRadius: %lf\n", objects[i]->sphere.radius);
     }
     i++;
